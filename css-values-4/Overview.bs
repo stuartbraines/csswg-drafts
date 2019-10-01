@@ -3279,6 +3279,105 @@ Type Checking</h3>
 	<<number>>s never become "length-like" in ''calc()''.
 	They always stay as <<number>>s.
 
+<h3 id='calc-internal'>
+Internal Representation</h3>
+
+	The [=internal representation=] of a [=math function=]
+	is a <dfn export>calculation tree</dfn>:
+	a tree of operator nodes,
+	such as Sum, Product, Min, or Cos,
+	with plain values (numbers, dimensions, etc) at the leaves.
+	[=Math functions=] are turned into [=calculation trees=]
+	depending on the function:
+
+	<dl class=switch>
+		: calc()
+		:: The [=internal representation=] of a ''calc()'' function
+			is the result of [=parsing a calculation=] from its argument.
+		: any other [=math function=]
+		:: The [=internal representation=]
+			is an operator node with the same name as the function,
+			whose children are the result of [=parsing a calculation=]
+			from each of the function's arguments,
+			in the order they appear.
+	</dl>
+
+	<div algorithm>
+		To <dfn export lt="parse a calculation|parsing a calculation">parse a calculation</dfn>
+		given a [=calculation=] |values|
+		represented as a list of [=component values=],
+		and returning a tree of operator nodes:
+
+		1. Discard any <<whitespace-token>> from |values|.
+
+		2. An item in |values| is an “operator”
+			if it's a <<delim-token>> with the value "+", "-", "*", or "/".
+			Otherwise, it's a “value”.
+
+		3. <b>Process the products.</b>
+			For every consecutive run of value items in |values|
+			separated by "*" or "/" operators:
+
+			1. For each "/" operator in the run,
+				replace its right-hand value item |rhs|
+				with an Invert node containing |rhs| as its child.
+
+			2. Replace the entire run with a Product node
+				containing the value items of the run as its children.
+
+		4. <b>Process the sums.</b>
+
+			1. For each "-" operator item in |values|,
+				replace its right-hand value item |rhs|
+				with a Negate node containing |rhs| as its child.
+
+			2. If |values| has only one item,
+				and it is a Product node
+				or a parenthesized [=simple block=],
+				replace |values| with that item.
+
+				Otherwise,
+				replace |values| with a Sum node
+				containing the value items of |values| as its children.
+
+		5. <b>Process the leaf nodes.</b>
+			For every leaf node |leaf| in |values|:
+
+			1. If |leaf| is a parenthesized [=simple block=],
+				replace |leaf|
+				with the result of [=parsing a calculation=] from |leaf|’s contents.
+			2. If |leaf| is a [=math function=],
+				replace |leaf| with the [=internal representation=] of that math function.
+			3. (Otherwise |leaf| is a <<number>>/<<dimension>>/etc--
+				either directly as a <<number-token>>/etc
+				or indirectly as a non-[=math function=] that resolves to one of those types--
+				and is left unchanged.)
+
+		6. Return the result of [=simplifying a calculation tree=] from |values|.
+	</div>
+
+<h4 id='calc-simplification'>
+Simplification</h4>
+
+	[=Internal representations=] of [=math functions=] are eagerly simplified to the extent possible,
+	using standard algebraic simplifications
+	(distributing multiplication over sums,
+	combining similar units,
+	etc.).
+
+	<div algorithm>
+		To <dfn export local-lt="simplify" lt="simplify a calculation tree|simplifying a calculation tree">simplify a calculation tree</a> |root|:
+
+		1. If |root| is a leaf node
+			(a plain value, not an operation node),
+			return |root|.
+
+		2. [=Simplify=] all the children of |root|.
+
+		3.
+
+
+
 <h3 id='calc-computed-value'>
 Computed Value</h3>
 
